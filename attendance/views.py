@@ -6,13 +6,65 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from drf_yasg import openapi
+from django.core.cache import cache
+import random
 from django.utils import timezone
 from django.db.models import Q
 from .models import User, Class, Subject, Lesson, QRCode, Attendance
 from .serializers import (
     UserSerializer, LoginSerializer, ClassSerializer, SubjectSerializer,
-    LessonSerializer, QRCodeSerializer, AttendanceSerializer, MarkAttendanceSerializer
+    LessonSerializer, QRCodeSerializer, AttendanceSerializer, MarkAttendanceSerializer, ForgotPasswordSerializer,ResetPasswordSerializer
 )
+
+
+
+@swagger_auto_schema(
+    method='post',
+    request_body=ForgotPasswordSerializer,
+    responses={
+        200: 'Reset code sent to user',
+        400: 'Invalid phone number'
+    },
+    operation_description="Send reset code to user's phone number"
+)
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def forgot_password_view(request):
+    serializer = ForgotPasswordSerializer(data=request.data)
+    if serializer.is_valid():
+        phone_number = serializer.validated_data['phone_number']
+
+        code = str(random.randint(100000, 999999))
+
+        cache.set(f'reset_code_{phone_number}', code, timeout=300)
+
+        print(f"Reset code for {phone_number}: {code}")
+
+        return Response({'message': 'Reset code sent successfully'}, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+@swagger_auto_schema(
+    method='post',
+    request_body=ResetPasswordSerializer,
+    responses={
+        200: 'Password reset successfully',
+        400: 'Invalid data or token'
+    },
+    operation_description="Reset password using token"
+)
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def reset_password_view(request):
+    serializer = ResetPasswordSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({'message': 'Password reset successfully'}, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
 
 
 @swagger_auto_schema(
@@ -249,7 +301,6 @@ def class_detail_view(request, class_id):
         class_obj.delete()
         return Response({'message': 'Class deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
 
-# Subject Management
 @swagger_auto_schema(
     method='get',
     responses={200: SubjectSerializer(many=True)},
@@ -310,13 +361,12 @@ def lessons_view(request):
     if request.method == 'GET':
         lessons = Lesson.objects.all()
         
-        # Filter by user role
         if request.user.role == 'teacher':
             lessons = lessons.filter(subject__teacher=request.user)
         elif request.user.role == 'student':
             lessons = lessons.filter(class_room__students=request.user)
         
-        # Filter by date
+       
         date = request.GET.get('date')
         if date:
             lessons = lessons.filter(start_time__date=date)

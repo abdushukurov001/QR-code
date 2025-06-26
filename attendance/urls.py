@@ -7,8 +7,10 @@ from attendance.views import *
 urlpatterns = [
     path('admin/', admin.site.urls),
     
-    path('api/login/', login_view, name='login'),
-    path('api/register/', register_view, name='register'),
+    path('api/auth/login/', login_view, name='login'),
+    path('api/auth/register/', register_view, name='register'),
+    path('api/auth/forgot-password/', forgot_password_view, name='forgot_password'),
+    path('api/auth/reset-password/', reset_password_view, name='reset_password'),
     
     path('api/users/', users_view, name='users'),
     path('api/users/<int:user_id>/', user_detail_view, name='user_detail'),

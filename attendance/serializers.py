@@ -4,6 +4,49 @@ from django.utils import timezone
 from datetime import timedelta
 from .models import User, Class, Subject, Lesson, QRCode, Attendance
 
+
+class ForgotPasswordSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(max_length=15)
+
+    def validate_phone_number(self, value):
+        from .models import User 
+        users = User.objects.filter(phone_number=value)
+        if not users.exists():
+            raise serializers.ValidationError("No user found with this phone number.")
+        return value
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(max_length=15)
+    code = serializers.CharField(max_length=6)
+    password = serializers.CharField(write_only=True, min_length=5)
+
+    def validate(self, data):
+        phone_number = data.get('phone_number')
+        code = data.get('code')
+        try:
+            user = User.objects.get(phone_number=phone_number)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("No user found with this phone number.")
+
+        from django.core.cache import cache
+        stored_code = cache.get(f"reset_code_{phone_number}")
+        if not stored_code or stored_code != code:
+            raise serializers.ValidationError("Invalid or expired code.")
+
+        return data
+
+    def save(self):
+        phone_number = self.validated_data['phone_number']
+        user = User.objects.filter(phone_number=phone_number).first()  
+        if not user:
+            raise serializers.ValidationError("User not found.")
+        user.set_password(self.validated_data['password'])
+        user.save()
+        from django.core.cache import cache
+        cache.delete(f"reset_code_{phone_number}")
+        return user
+
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
     

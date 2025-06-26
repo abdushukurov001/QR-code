@@ -14,7 +14,7 @@ class User(AbstractUser):
         ('student', 'Student'),
     ]
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='student')
-    phone_number = models.CharField(max_length=15)
+    phone_number = models.CharField(max_length=15, unique=True)
     full_name = models.CharField(max_length=100)
     
     def save(self, *args, **kwargs):
