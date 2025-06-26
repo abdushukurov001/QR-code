@@ -78,7 +78,7 @@ uuid, base64
 VS Code’da O‘rnatish va Ishga Tushirish
 1. Loyihani Yuklab Olish
 VS Code’da Terminal oching (Ctrl + ~) va quyidagi buyruqlarni bajaring:
-git clone https://github.com/sizning_username/qr-davomat-tizimi.git
+git clone https://github.com/abdushukurov001/QR-code.git
 cd qr-davomat-tizimi
 
 2. Virtual Mu hit Yaratish
